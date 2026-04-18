@@ -28,17 +28,28 @@ def _build_properties(data: dict) -> dict:
     title = " ".join(p for p in title_parts if p)
     props["ノートタイトル"] = {"title": [{"text": {"content": title}}]}
 
-    # テキスト型フィールド
-    text_fields = [
-        "評価者名", "サンプルID", "産地地域", "農園生産者名", "品種",
-        "抽出時間", "ドライアロマ", "ウェットアロマ",
-        "フロントノート", "ミッドノート", "フィニッシュ",
-        "テクスチャー", "収れん性", "総評", "改善提案特記事項",
-    ]
-    for field in text_fields:
-        val = data.get(field)
+    # テキスト型フィールド（Groqキー → Notionプロパティ名）
+    text_fields = {
+        "評価者名":       "評価者名",
+        "サンプルID":     "サンプルID",
+        "産地地域":       "産地・地域",
+        "農園生産者名":   "農園・生産者名",
+        "品種":           "品種",
+        "抽出時間":       "抽出時間",
+        "ドライアロマ":   "ドライアロマ",
+        "ウェットアロマ": "ウェットアロマ",
+        "フロントノート": "フロントノート",
+        "ミッドノート":   "ミッドノート",
+        "フィニッシュ":   "フィニッシュ",
+        "テクスチャー":   "テクスチャー",
+        "収れん性":       "収れん性",
+        "総評":           "総評",
+        "改善提案特記事項": "改善提案・特記事項",
+    }
+    for data_key, notion_key in text_fields.items():
+        val = data.get(data_key)
         if val:
-            props[field] = {"rich_text": [{"text": {"content": str(val)}}]}
+            props[notion_key] = {"rich_text": [{"text": {"content": str(val)}}]}
 
     # 日付型フィールド
     date_fields = ["評価日", "焙煎日"]
