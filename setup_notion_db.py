@@ -92,7 +92,9 @@ def setup():
 
     # 更新前のプロパティ確認
     db = client.databases.retrieve(database_id=DATABASE_ID)
-    before = list(db["properties"].keys())
+    print(f"レスポンスのキー: {list(db.keys())}")
+    print(f"オブジェクトタイプ: {db.get('object')}")
+    before = list(db.get("properties", {}).keys())
     print(f"更新前のプロパティ数: {len(before)}")
     print(f"現在のプロパティ: {before}")
 
