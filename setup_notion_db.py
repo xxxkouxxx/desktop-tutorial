@@ -4,7 +4,7 @@ Notion の Tasting Notes データベースに全プロパティを一括追加�
 """
 
 import os
-from notion_client import Client
+from notion_client import Client  # noqa: E402  (installed package, not local file)
 from dotenv import load_dotenv
 
 load_dotenv()

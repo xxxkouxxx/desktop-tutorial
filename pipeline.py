@@ -17,7 +17,7 @@ import json
 import sys
 
 from groq_parser import groq_parse
-import notion_client as nc
+import brewlog_notion as nc
 
 
 def run(text: str, page_id: str | None = None) -> None:
