@@ -1,14 +1,24 @@
 """
 Notion に Tasting Notes データベースを新規作成するセットアップスクリプト。
-NOTION_PARENT_PAGE_ID で指定したページの配下にデータベースを作成します。
+notion-client ライブラリをバイパスして requests で直接 API を呼び出す。
 初回のみ実行してください。
 """
 
+import json
 import os
-from notion_client import Client  # noqa: E402  (installed package, not local file)
+import requests
 from dotenv import load_dotenv
 
 load_dotenv()
+
+NOTION_API_KEY    = os.environ["NOTION_API_KEY"]
+PARENT_PAGE_ID    = os.environ["NOTION_PARENT_PAGE_ID"]
+
+HEADERS = {
+    "Authorization": f"Bearer {NOTION_API_KEY}",
+    "Content-Type": "application/json",
+    "Notion-Version": "2022-06-28",
+}
 
 
 def select_options(*names):
@@ -17,12 +27,8 @@ def select_options(*names):
 
 PROPERTIES = {
     "ノートタイトル": {"title": {}},
-
-    # 日付
-    "評価日": {"date": {}},
-    "焙煎日": {"date": {}},
-
-    # テキスト
+    "評価日":         {"date": {}},
+    "焙煎日":         {"date": {}},
     "評価者名":           {"rich_text": {}},
     "サンプルID":         {"rich_text": {}},
     "産地・地域":         {"rich_text": {}},
@@ -38,26 +44,22 @@ PROPERTIES = {
     "収れん性":           {"rich_text": {}},
     "総評":               {"rich_text": {}},
     "改善提案・特記事項": {"rich_text": {}},
-
-    # セレクト
     "生産国": {"select": {"options": select_options(
-        "エチオピア", "コロンビア", "ブラジル", "グアテマラ",
-        "ケニア", "ルワンダ", "パナマ", "コスタリカ", "その他"
+        "エチオピア","コロンビア","ブラジル","グアテマラ",
+        "ケニア","ルワンダ","パナマ","コスタリカ","その他"
     )}},
     "精製方法": {"select": {"options": select_options(
-        "Washed", "Natural", "Honey", "Anaerobic", "その他"
+        "Washed","Natural","Honey","Anaerobic","その他"
     )}},
     "焙煎度": {"select": {"options": select_options(
-        "浅煎り", "中浅煎り", "中煎り", "中深煎り", "深煎り"
+        "浅煎り","中浅煎り","中煎り","中深煎り","深煎り"
     )}},
     "抽出方法": {"select": {"options": select_options(
-        "V60", "エアロプレス", "フレンチプレス", "エスプレッソ", "xBloom", "その他"
+        "V60","エアロプレス","フレンチプレス","エスプレッソ","xBloom","その他"
     )}},
     "重さ": {"select": {"options": select_options(
-        "ライト", "ミディアムライト", "ミディアム", "ミディアムフル", "フル"
+        "ライト","ミディアムライト","ミディアム","ミディアムフル","フル"
     )}},
-
-    # 数値
     "粉量(g)":                {"number": {"format": "number"}},
     "湯量(ml)":               {"number": {"format": "number"}},
     "湯温(℃)":                {"number": {"format": "number"}},
@@ -73,19 +75,27 @@ PROPERTIES = {
 
 
 def setup():
-    client = Client(auth=os.environ["NOTION_API_KEY"])
-    parent_page_id = os.environ["NOTION_PARENT_PAGE_ID"]
+    payload = {
+        "parent": {"type": "page_id", "page_id": PARENT_PAGE_ID},
+        "title": [{"type": "text", "text": {"content": "Tasting Notes DB"}}],
+        "properties": PROPERTIES,
+    }
 
     print("▶ Notion に Tasting Notes データベースを作成中...")
-    result = client.databases.create(
-        parent={"type": "page_id", "page_id": parent_page_id},
-        title=[{"type": "text", "text": {"content": "Tasting Notes"}}],
-        properties=PROPERTIES,
+    res = requests.post(
+        "https://api.notion.com/v1/databases",
+        headers=HEADERS,
+        json=payload,
     )
 
-    print(f"レスポンスのキー: {list(result.keys())}")
-    db_id = result.get("id", "不明")
-    props = list(result.get("properties", {}).keys())
+    if not res.ok:
+        print(f"❌ エラー {res.status_code}: {res.text}")
+        return
+
+    data = res.json()
+    db_id = data.get("id", "不明")
+    props = list(data.get("properties", {}).keys())
+
     print(f"✓ 完了！データベース ID: {db_id}")
     print(f"作成されたプロパティ ({len(props)}件): {props}")
     print(f"\n.env の NOTION_DATABASE_ID をこの値に更新してください:")
