@@ -90,12 +90,23 @@ def build_properties() -> dict:
 def setup():
     client = Client(auth=os.environ["NOTION_API_KEY"])
 
-    print("▶ Notion データベースにプロパティを追加中...")
-    client.databases.update(
+    # 更新前のプロパティ確認
+    db = client.databases.retrieve(database_id=DATABASE_ID)
+    before = list(db["properties"].keys())
+    print(f"更新前のプロパティ数: {len(before)}")
+    print(f"現在のプロパティ: {before}")
+
+    print("\n▶ Notion データベースにプロパティを追加中...")
+    result = client.databases.update(
         database_id=DATABASE_ID,
         properties=build_properties(),
     )
-    print("✓ 完了！Notion の Tasting Notes データベースを確認してください。")
+
+    # 更新後のプロパティ確認
+    after = list(result["properties"].keys())
+    print(f"\n更新後のプロパティ数: {len(after)}")
+    print(f"追加されたプロパティ: {[p for p in after if p not in before]}")
+    print("\n✓ 完了！Notion の Tasting Notes データベースを確認してください。")
 
 
 if __name__ == "__main__":
