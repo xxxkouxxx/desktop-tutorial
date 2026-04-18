@@ -83,8 +83,9 @@ def setup():
         properties=PROPERTIES,
     )
 
-    db_id = result["id"]
-    props = list(result["properties"].keys())
+    print(f"レスポンスのキー: {list(result.keys())}")
+    db_id = result.get("id", "不明")
+    props = list(result.get("properties", {}).keys())
     print(f"✓ 完了！データベース ID: {db_id}")
     print(f"作成されたプロパティ ({len(props)}件): {props}")
     print(f"\n.env の NOTION_DATABASE_ID をこの値に更新してください:")
