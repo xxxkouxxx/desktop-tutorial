@@ -1,13 +1,13 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+このファイルは、リポジトリ内のコードを扱う際に Claude Code (claude.ai/code) へのガイダンスを提供します。
 
-## Repository Overview
+## リポジトリ概要
 
-This is a GitHub Desktop tutorial repository — a blank starter project with no source code, build system, or dependencies. The only content is `README.md`, which is a template for users learning GitHub Desktop workflows.
+これは GitHub Desktop のチュートリアルリポジトリです。ソースコード、ビルドシステム、依存関係を持たない空のスタータープロジェクトです。唯一のコンテンツは `README.md` で、GitHub Desktop のワークフローを学ぶユーザー向けのテンプレートです。
 
-## Current State
+## 現状
 
-- No build, test, or lint commands are configured.
-- No frameworks or languages are in use.
-- Development should begin by adding source files and configuring appropriate tooling for whatever project this becomes.
+- ビルド、テスト、リントのコマンドは設定されていません。
+- 使用しているフレームワークや言語はありません。
+- 今後プロジェクトとして発展させる際は、ソースファイルを追加し、適切なツールを設定してください。
