@@ -1,7 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  output: "export",
+  basePath: "/desktop-tutorial",
+  images: { unoptimized: true },
 };
 
 export default nextConfig;
