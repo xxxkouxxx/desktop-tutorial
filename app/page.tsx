@@ -21,7 +21,6 @@ interface HistoryEntry {
 interface SessionState {
   boxes: Box[];
   selectedIdx: number | null;
-  roundNum: number;
   done: boolean;
   history: HistoryEntry[];
 }
@@ -61,7 +60,6 @@ function initSession(storageKey: string, areaLabels: string[]): SessionState {
   return {
     boxes: buildBoxes(areaLabels),
     selectedIdx: null,
-    roundNum: 1,
     done: false,
     history: loadHistory(storageKey),
   };
@@ -214,7 +212,6 @@ function SessionPanel({
             setSession((s) => ({
               boxes: buildBoxes(areaLabels),
               selectedIdx: null,
-              roundNum: s.roundNum + 1,
               done: false,
               history: s.history,
             }));
@@ -258,10 +255,7 @@ function SessionPanel({
   return (
     <div className="flex flex-col bg-slate-800 rounded-2xl p-4 gap-3">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <h2 className={`text-xl font-bold ${titleColor}`}>{title}</h2>
-        <span className="text-xs text-slate-400">ラウンド {session.roundNum}</span>
-      </div>
+      <h2 className={`text-xl font-bold ${titleColor}`}>{title}</h2>
 
       {/* Probability */}
       <div className="flex items-center gap-2">
