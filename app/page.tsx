@@ -13,6 +13,8 @@ interface Box {
 }
 
 interface HistoryEntry {
+  area: string;
+  result: "当たり" | "ハズレ";
   date: string; // mm/dd
 }
 
@@ -137,17 +139,27 @@ function HistoryTable({
           クリア
         </button>
       </div>
-      <div className="overflow-y-auto max-h-32 rounded-lg border border-slate-700 p-2">
-        <div className="flex flex-wrap gap-1">
-          {[...history].reverse().map((entry, i) => (
-            <span
-              key={i}
-              className="text-xs bg-slate-700 text-slate-300 rounded px-2 py-1"
-            >
-              {entry.date}
-            </span>
-          ))}
-        </div>
+      <div className="overflow-y-auto max-h-48 rounded-lg border border-slate-700">
+        <table className="w-full text-xs text-slate-300">
+          <thead className="bg-slate-800 sticky top-0">
+            <tr>
+              <th className="py-1 px-2 text-left">エリア</th>
+              <th className="py-1 px-2 text-center">判定</th>
+              <th className="py-1 px-2 text-right">日付</th>
+            </tr>
+          </thead>
+          <tbody>
+            {[...history].reverse().map((entry, i) => (
+              <tr key={i} className={i % 2 === 0 ? "bg-slate-900" : "bg-slate-800/50"}>
+                <td className="py-1 px-2">{entry.area}</td>
+                <td className={`py-1 px-2 text-center font-bold ${entry.result === "当たり" ? "text-yellow-400" : "text-slate-500"}`}>
+                  {entry.result}
+                </td>
+                <td className="py-1 px-2 text-right text-slate-500">{entry.date}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );
@@ -187,13 +199,15 @@ function SessionPanel({
         if (prev.selectedIdx === null) return prev;
         const idx = prev.selectedIdx;
 
+        const areaName = prev.boxes.find((b) => b.id === idx)?.label ?? "";
+        const entry: HistoryEntry = { area: areaName, result, date: getDate() };
+        const newHistory = [...prev.history, entry];
+        saveHistory(storageKey, newHistory);
+
         if (result === "当たり") {
           const newBoxes = prev.boxes.map((b) =>
             b.id === idx ? { ...b, status: "winner" as BoxStatus } : b
           );
-          const entry: HistoryEntry = { date: getDate() };
-          const newHistory = [...prev.history, entry];
-          saveHistory(storageKey, newHistory);
 
           if (timerRef.current) clearTimeout(timerRef.current);
           timerRef.current = setTimeout(() => {
@@ -211,7 +225,7 @@ function SessionPanel({
           const newBoxes = prev.boxes.map((b) =>
             b.id === idx ? { ...b, status: "eliminated" as BoxStatus } : b
           );
-          return { ...prev, boxes: newBoxes, selectedIdx: null };
+          return { ...prev, boxes: newBoxes, selectedIdx: null, history: newHistory };
         }
       });
     },
