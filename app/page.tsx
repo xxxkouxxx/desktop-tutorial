@@ -4,7 +4,7 @@ import { useState, useCallback, useRef } from "react";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-type BoxStatus = "unopened" | "eliminated" | "winner";
+type BoxStatus = "unopened" | "selected" | "eliminated" | "winner";
 
 interface Box {
   id: number;
@@ -13,16 +13,12 @@ interface Box {
 }
 
 interface HistoryEntry {
-  round: number;
-  winnerLabel: string;
-  tries: number;
-  time: string;
+  date: string; // mm/dd
 }
 
 interface SessionState {
   boxes: Box[];
-  winnerIdx: number;
-  tries: number;
+  selectedIdx: number | null;
   roundNum: number;
   done: boolean;
   history: HistoryEntry[];
@@ -42,7 +38,7 @@ function saveHistory(key: string, history: HistoryEntry[]): void {
   try {
     localStorage.setItem(key, JSON.stringify(history.slice(-100)));
   } catch {
-    // quota exceeded — in-memory state is source of truth
+    // quota exceeded
   }
 }
 
@@ -52,15 +48,17 @@ function buildBoxes(areaLabels: string[]): Box[] {
   return areaLabels.map((label, id) => ({ id, label, status: "unopened" as BoxStatus }));
 }
 
-function randomWinner(): number {
-  return Math.floor(Math.random() * 4);
+function getDate(): string {
+  const now = new Date();
+  const mm = String(now.getMonth() + 1).padStart(2, "0");
+  const dd = String(now.getDate()).padStart(2, "0");
+  return `${mm}/${dd}`;
 }
 
 function initSession(storageKey: string, areaLabels: string[]): SessionState {
   return {
     boxes: buildBoxes(areaLabels),
-    winnerIdx: randomWinner(),
-    tries: 0,
+    selectedIdx: null,
     roundNum: 1,
     done: false,
     history: loadHistory(storageKey),
@@ -68,7 +66,7 @@ function initSession(storageKey: string, areaLabels: string[]): SessionState {
 }
 
 function calcRemaining(boxes: Box[]): number {
-  return boxes.filter((b) => b.status === "unopened").length;
+  return boxes.filter((b) => b.status === "unopened" || b.status === "selected").length;
 }
 
 // ─── AreaBox Button ───────────────────────────────────────────────────────────
@@ -88,6 +86,8 @@ function AreaBoxButton({
   const styles: Record<BoxStatus, string> = {
     unopened:
       "bg-slate-700 hover:bg-slate-500 hover:scale-105 cursor-pointer text-white shadow-lg",
+    selected:
+      "bg-blue-600 ring-4 ring-blue-400 text-white shadow-xl cursor-default scale-105",
     eliminated:
       "bg-slate-900 opacity-40 cursor-not-allowed text-slate-500",
     winner:
@@ -137,30 +137,17 @@ function HistoryTable({
           クリア
         </button>
       </div>
-      <div className="overflow-y-auto max-h-48 rounded-lg border border-slate-700">
-        <table className="w-full text-xs text-slate-300">
-          <thead className="bg-slate-800 sticky top-0">
-            <tr>
-              <th className="py-1 px-2 text-left">R</th>
-              <th className="py-1 px-2 text-left">当たり</th>
-              <th className="py-1 px-2 text-center">回数</th>
-              <th className="py-1 px-2 text-right">時刻</th>
-            </tr>
-          </thead>
-          <tbody>
-            {[...history].reverse().map((entry, i) => (
-              <tr
-                key={`${entry.round}-${i}`}
-                className={i % 2 === 0 ? "bg-slate-900" : "bg-slate-800/50"}
-              >
-                <td className="py-1 px-2">{entry.round}</td>
-                <td className="py-1 px-2 text-yellow-400">{entry.winnerLabel}</td>
-                <td className="py-1 px-2 text-center">{entry.tries}</td>
-                <td className="py-1 px-2 text-right text-slate-500">{entry.time}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="overflow-y-auto max-h-32 rounded-lg border border-slate-700 p-2">
+        <div className="flex flex-wrap gap-1">
+          {[...history].reverse().map((entry, i) => (
+            <span
+              key={i}
+              className="text-xs bg-slate-700 text-slate-300 rounded px-2 py-1"
+            >
+              {entry.date}
+            </span>
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -184,31 +171,27 @@ function SessionPanel({
   );
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const handleClick = useCallback(
-    (idx: number) => {
-      if (session.done) return;
+  const handleBoxClick = useCallback((idx: number) => {
+    setSession((prev) => {
+      if (prev.done || prev.selectedIdx !== null) return prev;
+      const newBoxes = prev.boxes.map((b) =>
+        b.id === idx ? { ...b, status: "selected" as BoxStatus } : b
+      );
+      return { ...prev, boxes: newBoxes, selectedIdx: idx };
+    });
+  }, []);
 
+  const handleResult = useCallback(
+    (result: "当たり" | "ハズレ") => {
       setSession((prev) => {
-        if (prev.done) return prev;
+        if (prev.selectedIdx === null) return prev;
+        const idx = prev.selectedIdx;
 
-        const won = idx === prev.winnerIdx;
-        const newTries = prev.tries + 1;
-        const newBoxes: Box[] = prev.boxes.map((b) =>
-          b.id === idx
-            ? { ...b, status: (won ? "winner" : "eliminated") as BoxStatus }
-            : b
-        );
-
-        if (won) {
-          const entry: HistoryEntry = {
-            round: prev.roundNum,
-            winnerLabel: areaLabels[prev.winnerIdx],
-            tries: newTries,
-            time: new Date().toLocaleTimeString("ja-JP", {
-              hour: "2-digit",
-              minute: "2-digit",
-            }),
-          };
+        if (result === "当たり") {
+          const newBoxes = prev.boxes.map((b) =>
+            b.id === idx ? { ...b, status: "winner" as BoxStatus } : b
+          );
+          const entry: HistoryEntry = { date: getDate() };
           const newHistory = [...prev.history, entry];
           saveHistory(storageKey, newHistory);
 
@@ -216,21 +199,23 @@ function SessionPanel({
           timerRef.current = setTimeout(() => {
             setSession((s) => ({
               boxes: buildBoxes(areaLabels),
-              winnerIdx: randomWinner(),
-              tries: 0,
+              selectedIdx: null,
               roundNum: s.roundNum + 1,
               done: false,
               history: s.history,
             }));
           }, 1200);
 
-          return { ...prev, boxes: newBoxes, tries: newTries, done: true, history: newHistory };
+          return { ...prev, boxes: newBoxes, selectedIdx: null, done: true, history: newHistory };
+        } else {
+          const newBoxes = prev.boxes.map((b) =>
+            b.id === idx ? { ...b, status: "eliminated" as BoxStatus } : b
+          );
+          return { ...prev, boxes: newBoxes, selectedIdx: null };
         }
-
-        return { ...prev, boxes: newBoxes, tries: newTries };
       });
     },
-    [session.done, storageKey]
+    [storageKey, areaLabels]
   );
 
   const clearHistory = useCallback(() => {
@@ -250,6 +235,11 @@ function SessionPanel({
       : remaining === 2
       ? "text-orange-400"
       : "text-red-400";
+
+  const selectedBox =
+    session.selectedIdx !== null
+      ? session.boxes.find((b) => b.id === session.selectedIdx)
+      : null;
 
   return (
     <div className="flex flex-col bg-slate-800 rounded-2xl p-4 gap-3">
@@ -272,11 +262,34 @@ function SessionPanel({
           <AreaBoxButton
             key={box.id}
             box={box}
-            disabled={session.done}
-            onClick={() => handleClick(box.id)}
+            disabled={session.done || session.selectedIdx !== null}
+            onClick={() => handleBoxClick(box.id)}
           />
         ))}
       </div>
+
+      {/* 当たり / ハズレ panel */}
+      {selectedBox && !session.done && (
+        <div className="flex flex-col items-center gap-2 bg-slate-700 rounded-xl p-3">
+          <span className="text-sm text-slate-300 font-semibold">
+            {selectedBox.label} の結果は？
+          </span>
+          <div className="flex gap-3 w-full">
+            <button
+              onClick={() => handleResult("当たり")}
+              className="flex-1 py-2 bg-yellow-400 text-slate-900 font-bold rounded-xl hover:bg-yellow-300 transition-colors"
+            >
+              当たり ⭐
+            </button>
+            <button
+              onClick={() => handleResult("ハズレ")}
+              className="flex-1 py-2 bg-slate-600 text-white font-bold rounded-xl hover:bg-slate-500 transition-colors"
+            >
+              ハズレ ❌
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Win message */}
       {session.done && (
