@@ -48,19 +48,17 @@ function saveHistory(key: string, history: HistoryEntry[]): void {
 
 // ─── Game Logic ──────────────────────────────────────────────────────────────
 
-const AREA_LABELS = ["エリアA", "エリアB", "エリアC", "エリアD"];
-
-function buildBoxes(): Box[] {
-  return AREA_LABELS.map((label, id) => ({ id, label, status: "unopened" as BoxStatus }));
+function buildBoxes(areaLabels: string[]): Box[] {
+  return areaLabels.map((label, id) => ({ id, label, status: "unopened" as BoxStatus }));
 }
 
 function randomWinner(): number {
   return Math.floor(Math.random() * 4);
 }
 
-function initSession(storageKey: string): SessionState {
+function initSession(storageKey: string, areaLabels: string[]): SessionState {
   return {
-    boxes: buildBoxes(),
+    boxes: buildBoxes(areaLabels),
     winnerIdx: randomWinner(),
     tries: 0,
     roundNum: 1,
@@ -174,13 +172,15 @@ function SessionPanel({
   title,
   storageKey,
   titleColor,
+  areaLabels,
 }: {
   title: string;
   storageKey: string;
   titleColor: string;
+  areaLabels: string[];
 }) {
   const [session, setSession] = useState<SessionState>(() =>
-    initSession(storageKey)
+    initSession(storageKey, areaLabels)
   );
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -202,7 +202,7 @@ function SessionPanel({
         if (won) {
           const entry: HistoryEntry = {
             round: prev.roundNum,
-            winnerLabel: AREA_LABELS[prev.winnerIdx],
+            winnerLabel: areaLabels[prev.winnerIdx],
             tries: newTries,
             time: new Date().toLocaleTimeString("ja-JP", {
               hour: "2-digit",
@@ -215,7 +215,7 @@ function SessionPanel({
           if (timerRef.current) clearTimeout(timerRef.current);
           timerRef.current = setTimeout(() => {
             setSession((s) => ({
-              boxes: buildBoxes(),
+              boxes: buildBoxes(areaLabels),
               winnerIdx: randomWinner(),
               tries: 0,
               roundNum: s.roundNum + 1,
@@ -313,11 +313,13 @@ export default function Home() {
           title="テメナス"
           storageKey="limbus-history-temenus"
           titleColor="text-blue-400"
+          areaLabels={["テメナス北塔", "テメナス西塔", "テメナス東塔", "テメナス中央塔"]}
         />
         <SessionPanel
           title="アポリオン"
           storageKey="limbus-history-apollyon"
           titleColor="text-purple-400"
+          areaLabels={["アポリオンNW", "アポリオンSW", "アポリオンNE", "アポリオンSE"]}
         />
       </div>
     </main>
