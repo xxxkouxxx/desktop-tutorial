@@ -231,8 +231,14 @@ function SessionPanel({
 
   const clearHistory = useCallback(() => {
     saveHistory(storageKey, []);
-    setSession((prev) => ({ ...prev, history: [] }));
-  }, [storageKey]);
+    setSession((prev) => ({
+      ...prev,
+      boxes: buildBoxes(areaLabels),
+      selectedIdx: null,
+      done: false,
+      history: [],
+    }));
+  }, [storageKey, areaLabels]);
 
   const remaining = calcRemaining(session.boxes);
   const prob = `1/${remaining}`;
